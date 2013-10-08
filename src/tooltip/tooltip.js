@@ -156,8 +156,8 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                                 ttHeight,
                                 ttPosition;
 
-                            // Don't show empty tooltips.
-                            if (!scope.tt_content) {
+                            // Don't show already shown or empty tooltips.
+                            if (scope.tt_isOpen || !scope.tt_content) {
                                 return;
                             }
 
@@ -269,6 +269,10 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
 
                         // Hide the tooltip popup element.
                         function hide(destroy) {
+                            if (!scope.tt_isOpen) {
+                                return;
+                            }
+
                             // First things first: we don't show it anymore.
                             scope.tt_isOpen = false;
 
