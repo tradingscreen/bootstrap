@@ -2019,7 +2019,7 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                         'compile-scope="$parent"' +
                         '>' +
                         '</' + directiveName + '-popup>';
-                var tt_placements = ['right', 'bottom', 'left', 'top'];
+                var possiblePlacements = ['right', 'bottom', 'left', 'top'];
 
                 return {
                     restrict: 'EA',
@@ -2033,7 +2033,7 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                         var appendToBody = angular.isDefined(options.appendToBody) ? options.appendToBody : false;
                         var triggers = getTriggers(undefined);
                         var hasRegisteredTriggers = false;
-                        var placement;
+                        var requestedPlacement;
                         var bodyPosition;
 
                         // By default, the tooltip is not open.
@@ -2065,11 +2065,6 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
 
                         // Show the tooltip popup element.
                         function show() {
-                            var position,
-                                ttWidth,
-                                ttHeight,
-                                ttPosition;
-
                             // Don't show already shown or empty tooltips.
                             if (scope.tt_isOpen || !scope.tt_content) {
                                 return;
@@ -2081,101 +2076,16 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                                 $timeout.cancel(transitionTimeout);
                             }
 
-                            // Set the initial positioning.
-                            tooltip.css({ top: 0, left: 0, display: 'block' });
-
                             // Now we add it to the DOM because need some info about it. But it's not
                             // visible yet anyway.
                             if (appendToBody) {
                                 $body = $body || $document.find('body');
                                 $body.append(tooltip);
-                                bodyPosition = $position.offset($body);
                             } else {
                                 target.after(tooltip);
                             }
 
-                            // Get the position of the target element.
-                            position = appendToBody ? $position.offset(target) : $position.position(target);
-
-                            // Get the height and width of the tooltip so we can center it.
-                            ttWidth = tooltip.prop('offsetWidth');
-                            ttHeight = tooltip.prop('offsetHeight');
-
-                            // Run through all possible placements starting with the requested placement to find
-                            // one that does not clip the tooltip. If all placement options result in clipping
-                            // then use the desired desired.
-                            var i;
-                            for (i = 0; i < tt_placements.length; i++) {
-                                if (placement === tt_placements[i]) {
-                                    break;
-                                }
-                            }
-                            var startIndex = i;
-                            var done = false;
-
-                            while (true) {
-                                // Calculate the tooltip's top and left coordinates to center it with
-                                // the target element.
-                                switch (tt_placements[i]) {
-                                    case 'right':
-                                        ttPosition = {
-                                            top: position.top + position.height / 2 - ttHeight / 2,
-                                            left: position.left + position.width
-                                        };
-                                        break;
-                                    case 'bottom':
-                                        ttPosition = {
-                                            top: position.top + position.height,
-                                            left: position.left + position.width / 2 - ttWidth / 2
-                                        };
-                                        break;
-                                    case 'left':
-                                        ttPosition = {
-                                            top: position.top + position.height / 2 - ttHeight / 2,
-                                            left: position.left - ttWidth
-                                        };
-                                        break;
-                                    default:
-                                        ttPosition = {
-                                            top: position.top - ttHeight,
-                                            left: position.left + position.width / 2 - ttWidth / 2
-                                        };
-                                        break;
-                                }
-
-                                if (done || !appendToBody) {
-                                    break;
-                                } else {
-                                    // Check if the computed position results in clipping. If so, advance the
-                                    // index (wrapping it around if necessarey) to point to the next possible
-                                    // placement and go through the loop again to try it. Once the index
-                                    // returns to the original placement we know that all placements resulted
-                                    // in clipping. In such case run though the loop again to recompute the
-                                    // position and go with it.
-                                    if (ttPosition.left < 0 ||
-                                        ttPosition.top < 0 ||
-                                        ttPosition.left + ttWidth > bodyPosition.width ||
-                                        ttPosition.top + ttHeight > bodyPosition.height) {
-                                        i++;
-                                        if (i >= tt_placements.length) {
-                                            i = 0;
-                                        }
-                                        if (i === startIndex) {
-                                            done = true;
-                                        }
-                                    } else {
-                                        // If a placement found that does not clip the tooltip - set it
-                                        scope.tt_placement = tt_placements[i];
-                                        break;
-                                    }
-                                }
-                            }
-
-                            ttPosition.top += 'px';
-                            ttPosition.left += 'px';
-
-                            // Now set the calculated positioning.
-                            tooltip.css(ttPosition);
+                            position();
 
                             // And show the tooltip.
                             scope.tt_isOpen = true;
@@ -2215,6 +2125,103 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             }
                         }
 
+                        function position() {
+                            var targetPosition,
+                                ttWidth,
+                                ttHeight,
+                                ttPosition;
+
+                            // Set the initial positioning.
+                            tooltip.css({ top: 0, left: 0, display: 'block' });
+
+                            // Get the position of the target element.
+                            targetPosition = appendToBody ? $position.offset(target) : $position.position(target);
+
+                            // Get the height and width of the tooltip so we can center it.
+                            ttWidth = tooltip.prop('offsetWidth');
+                            ttHeight = tooltip.prop('offsetHeight');
+
+                            // Run through all possible placements starting with the requested placement to find
+                            // one that does not clip the tooltip. If all placement options result in clipping
+                            // then use the requested placement and let it be clipped.
+                            var i;
+                            for (i = 0; i < possiblePlacements.length; i++) {
+                                if (requestedPlacement === possiblePlacements[i]) {
+                                    break;
+                                }
+                            }
+                            var startIndex = i;
+                            var done = false;
+
+                            if (appendToBody) {
+                                bodyPosition = $position.offset($body);
+                            }
+
+                            while (true) {
+                                // Calculate the tooltip's top and left coordinates to center it with
+                                // the target element.
+                                switch (possiblePlacements[i]) {
+                                    case 'right':
+                                        ttPosition = {
+                                            top: targetPosition.top + targetPosition.height / 2 - ttHeight / 2,
+                                            left: targetPosition.left + targetPosition.width
+                                        };
+                                        break;
+                                    case 'bottom':
+                                        ttPosition = {
+                                            top: targetPosition.top + targetPosition.height,
+                                            left: targetPosition.left + targetPosition.width / 2 - ttWidth / 2
+                                        };
+                                        break;
+                                    case 'left':
+                                        ttPosition = {
+                                            top: targetPosition.top + targetPosition.height / 2 - ttHeight / 2,
+                                            left: targetPosition.left - ttWidth
+                                        };
+                                        break;
+                                    default:
+                                        ttPosition = {
+                                            top: targetPosition.top - ttHeight,
+                                            left: targetPosition.left + targetPosition.width / 2 - ttWidth / 2
+                                        };
+                                        break;
+                                }
+
+                                if (done || !appendToBody) {
+                                    break;
+                                } else {
+                                    // Check if the computed position results in clipping. If so, advance the
+                                    // index (wrapping it around if necessarey) to point to the next possible
+                                    // placement and go through the loop again to try it. Once the index
+                                    // returns back to the requested placement we know that all placements resulted
+                                    // in clipping. In such case run though the loop again to recompute the
+                                    // position and go with it.
+                                    if (ttPosition.left < 0 ||
+                                        ttPosition.top < 0 ||
+                                        ttPosition.left + ttWidth > bodyPosition.width ||
+                                        ttPosition.top + ttHeight > bodyPosition.height) {
+                                        i++;
+                                        if (i >= possiblePlacements.length) {
+                                            i = 0;
+                                        }
+                                        if (i === startIndex) {
+                                            done = true;
+                                        }
+                                    } else {
+                                        // If a placement is found that does not clip the tooltip - set it
+                                        scope.tt_placement = possiblePlacements[i];
+                                        break;
+                                    }
+                                }
+                            }
+
+                            ttPosition.top += 'px';
+                            ttPosition.left += 'px';
+
+                            // Now set the calculated positioning.
+                            tooltip.css(ttPosition);
+                        }
+
                         /**
                          * Observe the relevant attributes.
                          */
@@ -2227,7 +2234,7 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                         });
 
                         attrs.$observe(prefix + 'Placement', function (val) {
-                            placement = angular.isDefined(val) ? val : options.placement;
+                            requestedPlacement = angular.isDefined(val) ? val : options.placement;
                         });
 
                         attrs.$observe(prefix + 'Animation', function (val) {
@@ -2282,6 +2289,15 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                                     $timeout(show);
                             } else {
                                 target = val;
+                            }
+                        });
+
+                        // Reposition the tooltip if necessary when the size of the content changes
+                        scope.$watch(function() {
+                            return tooltip.prop('clientWidth');
+                        }, function (value, oldValue) {
+                            if (oldValue > 0 && value > 0) {
+                                position();
                             }
                         });
 
