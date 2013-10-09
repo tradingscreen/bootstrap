@@ -189,7 +189,7 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             //if tooltip is going to be shown after delay, we must cancel this
                             $timeout.cancel(popupTimeout);
 
-                            // And now we remove it from the DOM. However, if we have animation, we 
+                            // And now we remove it from the DOM. However, if we have animation, we
                             // need to wait for it to expire beforehand.
                             // FIXME: this is a placeholder for a port of the transitions library.
                             if (angular.isDefined(scope.tt_animation) && scope.tt_animation()) {
@@ -211,11 +211,27 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             }
                         }
 
+                        function intersection(r1, r2) {
+                            if (r1.x1 < r2.x1) r1.x1 = r2.x1;
+                            if (r1.y1 < r2.y1) r1.y1 = r2.y1;
+                            if (r1.x2 > r2.x2) r1.x2 = r2.x2;
+                            if (r1.y2 > r2.y2) r1.y2 = r2.y2;
+                            r1.x2 -= r1.x1;
+                            r1.y2 -= r1.y1;
+                            return {
+                                x: r1.x1,
+                                y: r1.y1,
+                                width: r1.x2,
+                                height: r1.y2
+                            };
+                        }
+
                         function position() {
                             var targetPosition,
                                 ttWidth,
                                 ttHeight,
-                                ttPosition;
+                                ttPosition,
+                                bestPlacement = undefined;
 
                             // Set the initial positioning.
                             tooltip.css({ top: 0, left: 0, display: 'block' });
@@ -237,7 +253,6 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                                 }
                             }
                             var startIndex = i;
-                            var done = false;
 
                             if (appendToBody) {
                                 bodyPosition = $position.offset($body);
@@ -273,31 +288,47 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                                         break;
                                 }
 
-                                if (done || !appendToBody) {
+                                if (!appendToBody) {
                                     break;
-                                } else {
-                                    // Check if the computed position results in clipping. If so, advance the
-                                    // index (wrapping it around if necessarey) to point to the next possible
-                                    // placement and go through the loop again to try it. Once the index
-                                    // returns back to the requested placement we know that all placements resulted
-                                    // in clipping. In such case run though the loop again to recompute the
-                                    // position and go with it.
-                                    if (ttPosition.left < 0 ||
-                                        ttPosition.top < 0 ||
-                                        ttPosition.left + ttWidth > bodyPosition.width ||
-                                        ttPosition.top + ttHeight > bodyPosition.height) {
-                                        i++;
-                                        if (i >= possiblePlacements.length) {
-                                            i = 0;
-                                        }
-                                        if (i === startIndex) {
-                                            done = true;
-                                        }
-                                    } else {
-                                        // If a placement is found that does not clip the tooltip - set it
-                                        scope.tt_placement = possiblePlacements[i];
+                                }
+
+                                // Check if the computed position results in clipping. If so, advance the
+                                // index (wrapping it around if necessary) to point to the next possible
+                                // placement and go through the loop again to try it. Once the index returns
+                                // back to the requested placement we know that all placements resulted in
+                                // clipping. If so, use the placement that resulted in the smallest clipping.
+                                var rect = intersection(
+                                    {
+                                        x1: ttPosition.left,
+                                        y1: ttPosition.top,
+                                        x2: ttPosition.left + ttWidth,
+                                        y2: ttPosition.top + ttHeight
+                                    },
+                                    {
+                                        x1: 0,
+                                        y1: 0,
+                                        x2: bodyPosition.width,
+                                        y2: bodyPosition.height
+                                    }
+                                );
+                                if (rect.width < ttWidth || rect.height < ttHeight) {
+                                    var area = rect.width * rect.height;
+                                    if (!bestPlacement || bestPlacement.area < area) {
+                                        bestPlacement = { area: area, position: ttPosition, placement: possiblePlacements[i] };
+                                    }
+                                    i++;
+                                    if (i >= possiblePlacements.length) {
+                                        i = 0;
+                                    }
+                                    if (i === startIndex) {
+                                        ttPosition = bestPlacement.position;
+                                        scope.tt_placement = bestPlacement.placement;
                                         break;
                                     }
+                                } else {
+                                    // If a placement is found that does not clip the tooltip - set it
+                                    scope.tt_placement = possiblePlacements[i];
+                                    break;
                                 }
                             }
 
