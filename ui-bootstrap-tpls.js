@@ -2035,6 +2035,7 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                         var hasRegisteredTriggers = false;
                         var requestedPlacement;
                         var bodyPosition;
+                        var tooltipWidthWatcher;
 
                         // By default, the tooltip is not open.
                         // TODO add ability to start tooltip opened
@@ -2063,6 +2064,25 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             });
                         }
 
+                        function widthWatcher() {
+                            function start() {
+                                // Reposition the tooltip if necessary when the size of the content changes
+                                return scope.$watch(function() {
+                                    return tooltip.prop('clientWidth');
+                                }, function (value, oldValue) {
+                                    // Resize tooltip to accommodate the content if its size has changed ignoring
+                                    // the initial (oldValue is undefined) and final (value is undefined) resize
+                                    if (oldValue > 0 && value > 0 && oldValue !== value) {
+                                        position();
+                                    }
+                                });
+                            }
+
+                            return {
+                                stop: start()
+                            }
+                        }
+
                         // Show the tooltip popup element.
                         function show() {
                             // Don't show already shown or empty tooltips.
@@ -2089,6 +2109,8 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
 
                             // And show the tooltip.
                             scope.tt_isOpen = true;
+
+                            tooltipWidthWatcher = widthWatcher();
                         }
 
                         // Hide the tooltip popup element.
@@ -2096,6 +2118,8 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             if (!scope.tt_isOpen) {
                                 return;
                             }
+
+                            tooltipWidthWatcher.stop();
 
                             // First things first: we don't show it anymore.
                             scope.tt_isOpen = false;
@@ -2303,34 +2327,29 @@ angular.module('ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap.
                             appendToBody = angular.isDefined(val) ? $parse(val)(scope) : appendToBody;
                         });
 
-                        scope.$watch(attrs[prefix + 'Visible'], function (val) {
-                            if (val && !scope.tt_isOpen) {
-                                $timeout(show);
-                            } else if (!val && scope.tt_isOpen) {
-                                $timeout(hide);
-                            }
-                        });
+						if (attrs[prefix + 'Visible']) {
+							scope.$watch(attrs[prefix + 'Visible'], function (val) {
+								if (val && !scope.tt_isOpen) {
+									$timeout(show);
+								} else if (!val && scope.tt_isOpen) {
+									$timeout(hide);
+								}
+							});
+						}
 
-                        scope.$watch(attrs[prefix + 'Target'], function (val) {
-                            if (scope.tt_isOpen && target !== val) {
-                                if (target)
-                                    $timeout(hide);
-                                target = val;
-                                if (val)
-                                    $timeout(show);
-                            } else {
-                                target = val;
-                            }
-                        });
-
-                        // Reposition the tooltip if necessary when the size of the content changes
-                        scope.$watch(function() {
-                            return tooltip.prop('clientWidth');
-                        }, function (value, oldValue) {
-                            if (oldValue > 0 && value > 0) {
-                                position();
-                            }
-                        });
+						if (attrs[prefix + 'Target']) {
+							scope.$watch(attrs[prefix + 'Target'], function (val) {
+								if (scope.tt_isOpen && target !== val) {
+									if (target)
+										$timeout(hide);
+									target = val;
+									if (val)
+										$timeout(show);
+								} else {
+									target = val;
+								}
+							});
+						}
 
                         // if a tooltip is attached to <body> we need to remove it on
                         // location change as its parent scope will probably not be destroyed
