@@ -167,7 +167,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
 
 
               // Don't show empty tooltips.
-              if ( ! scope.content ) {
+              if ( ! scope.content || scope.isOpen ) {
                 return angular.noop;
               }
 
@@ -203,11 +203,17 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
 
             // Hide the tooltip popup element.
             function hide() {
-              // First things first: we don't show it anymore.
-              scope.isOpen = false;
 
               //if tooltip is going to be shown after delay, we must cancel this
               $timeout.cancel( popupTimeout );
+
+              // Don't show already shown or empty tooltips.
+              if ( !scope.isOpen ) {
+                 return;
+              }
+
+              // First things first: we don't show it anymore.
+              scope.isOpen = false;
 
               // And now we remove it from the DOM. However, if we have animation, we 
               // need to wait for it to expire beforehand.
