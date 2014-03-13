@@ -110,6 +110,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
           var tooltipLinker = $compile( template );
 
           return function link ( scope, element, attrs, tooltipCtrl ) {
+            var target = element;
             var tooltip, tooltipScope;
             var transitionTimeout;
             var popupTimeout;
@@ -119,7 +120,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
 
             var positionTooltip = function () {
 
-              var ttPosition = $position.positionElements(element, tooltip, scope.placement, appendToBody);
+              var ttPosition = $position.positionElements(target, tooltip, scope.placement, appendToBody);
               ttPosition.top += 'px';
               ttPosition.left += 'px';
 
@@ -186,7 +187,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               if ( appendToBody ) {
                   $document.find( 'body' ).append( tooltip );
               } else {
-                element.after( tooltip );
+                target.after( tooltip );
               }
 
               positionTooltip();
@@ -266,8 +267,8 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             });
 
             var unregisterTriggers = function () {
-              element.unbind(triggers.show, showTooltipBind);
-              element.unbind(triggers.hide, hideTooltipBind);
+              target.unbind(triggers.show, showTooltipBind);
+              target.unbind(triggers.hide, hideTooltipBind);
             };
 
             attrs.$observe( prefix+'Trigger', function ( val ) {
@@ -277,10 +278,10 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 triggers = getTriggers( val );
 
                 if ( triggers.show === triggers.hide ) {
-                  element.bind( triggers.show, toggleTooltipBind );
+                  target.bind( triggers.show, toggleTooltipBind );
                 } else {
-                  element.bind( triggers.show, showTooltipBind );
-                  element.bind( triggers.hide, hideTooltipBind );
+                  target.bind( triggers.show, showTooltipBind );
+                  target.bind( triggers.hide, hideTooltipBind );
                 }
               }
             });
@@ -295,6 +296,22 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 }
               });
             }
+
+            if (attrs[prefix + 'Target']) {
+              scope.$parent.$watch(attrs[prefix + 'Target'], function (val) {
+                  if (scope.isOpen && target !== val) {
+                    if (target) {
+                      $timeout(hide);
+                    }
+                    target = val;
+                    if (val) {
+                      $timeout(show);
+                    }
+                  } else {
+                    target = val;
+                  }
+                });
+              }
 
             var animation = scope.$eval(attrs[prefix + 'Animation']);
             scope.animation = angular.isDefined(animation) ? !!animation : options.animation;
