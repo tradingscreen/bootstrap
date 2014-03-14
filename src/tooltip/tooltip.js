@@ -117,15 +117,93 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             var appendToBody = angular.isDefined( options.appendToBody ) ? options.appendToBody : false;
             var triggers = getTriggers( undefined );
             var hasEnableExp = angular.isDefined(attrs[prefix+'Enable']);
+            var tooltipWidthWatcher;
+
+            function intersection(r1, r2) {
+              if (r1.x1 < r2.x1) {
+                r1.x1 = r2.x1;
+              }
+              if (r1.y1 < r2.y1) {
+                r1.y1 = r2.y1;
+              }
+              if (r1.x2 > r2.x2) {
+                r1.x2 = r2.x2;
+              }
+              if (r1.y2 > r2.y2) {
+                r1.y2 = r2.y2;
+              }
+              r1.x2 -= r1.x1;
+              r1.y2 -= r1.y1;
+              return {
+                x: r1.x1,
+                y: r1.y1,
+                width: r1.x2,
+                height: r1.y2
+              };
+            }
 
             var positionTooltip = function () {
+              tooltip.css( {top: 0, left: 0} );
 
-              var ttPosition = $position.positionElements(target, tooltip, scope.placement, appendToBody);
-              ttPosition.top += 'px';
-              ttPosition.left += 'px';
+              var possible = ['bottom', 'right', 'top', 'left'];
+              var start = possible.indexOf(scope.preferredPlacement);
+              if (start < 0) {
+                start = 0;
+              }
+
+              var ttWidth = tooltip.prop('offsetWidth');
+              var ttHeight = tooltip.prop('offsetHeight');
+
+              var bodyPosition;
+              if (appendToBody) {
+                bodyPosition = $position.offset($document.find('body'));
+              }
+
+              var bestPlacement;
+              var i = start;
+              do {
+                var ttPosition = $position.positionElements(target, tooltip, possible[i], appendToBody);
+                if (!bodyPosition) {
+                  bestPlacement = ttPosition;
+                  scope.placement = possible[i];
+                  break;
+                }
+                var rect = intersection(
+                  {
+                    x1: ttPosition.left,
+                    y1: ttPosition.top,
+                    x2: ttPosition.left + ttWidth,
+                    y2: ttPosition.top + ttHeight
+                  },
+                  {
+                    x1: 0,
+                    y1: 0,
+                    x2: bodyPosition.width,
+                    y2: bodyPosition.height
+                  }
+                );
+
+                var area = rect.width * rect.height;
+                if (rect.width === ttWidth && rect.height === ttHeight) {
+                  bestPlacement = ttPosition;
+                  scope.placement = possible[i];
+                  break;
+                }
+
+                if (!bestPlacement || bestPlacement.area < area) {
+                  bestPlacement = { area: area, top: ttPosition.top, left: ttPosition.left };
+                  scope.placement = possible[i];
+                }
+
+                i = (i + 1) % possible.length;
+              } while (i != start);
+
+
+              bestPlacement.top += 'px';
+              bestPlacement.left += 'px';
 
               // Now set the calculated positioning.
-              tooltip.css( ttPosition );
+              tooltip.css( bestPlacement );
             };
 
             // Set up the correct scope
@@ -162,6 +240,25 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               });
             }
 
+            function widthWatcher() {
+              function start() {
+                // Reposition the tooltip if necessary when the size of the content changes
+                return scope.$watch(function() {
+                  return tooltip.prop('clientWidth');
+                }, function (value, oldValue) {
+                  // Resize tooltip to accommodate the content if its size has changed ignoring
+                  // the initial (oldValue is undefined) and final (value is undefined) resize
+                  if (oldValue > 0 && value > 0 && oldValue !== value) {
+                    positionTooltip();
+                  }
+                });
+              }
+
+              return {
+                stop: start()
+              };
+            }
+
             // Show the tooltip popup element.
             function show() {
 
@@ -190,11 +287,13 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 target.after( tooltip );
               }
 
-              positionTooltip();
-
               // And show the tooltip.
               scope.isOpen = true;
               scope.$digest(); // digest required as $apply is not called
+
+              positionTooltip();
+
+              tooltipWidthWatcher = widthWatcher();
 
               // Return positioning function as promise callback for correct
               // positioning after draw.
@@ -211,6 +310,8 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               if ( !scope.isOpen ) {
                  return;
               }
+
+              tooltipWidthWatcher.stop();
 
               // First things first: we don't show it anymore.
               scope.isOpen = false;
@@ -265,6 +366,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
 
             attrs.$observe( prefix+'Placement', function ( val ) {
               scope.placement = angular.isDefined( val ) ? val : options.placement;
+              scope.preferredPlacement = scope.placement;
             });
 
             attrs.$observe( prefix+'PopupDelay', function ( val ) {
