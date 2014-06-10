@@ -1,3 +1,7 @@
+# 0.11.1 (2014-06-10)
+
+
+
 # 0.10.0 (2014-01-13)
 
 _This release adds AngularJS 1.2 support_
