@@ -1,3 +1,11 @@
+# 0.12.0 (2014-06-10)
+
+
+## Bug Fixes
+
+- **tooltip:** 
+  - keep the targets bounding box for positioning ([7b71ef52](http://github.com/angular-ui/bootstrap/commit/7b71ef52))   
+
 # 0.11.1 (2014-06-10)
 
 

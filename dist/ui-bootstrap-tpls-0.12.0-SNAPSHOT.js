@@ -2,7 +2,7 @@
  * angular-ui-bootstrap
  * http://angular-ui.github.io/bootstrap/
 
- * Version: 0.11.0-ts - 2014-03-14
+ * Version: 0.12.0-SNAPSHOT - 2014-06-10
  * License: MIT
  */
 angular.module("ui.bootstrap", ["ui.bootstrap.tpls", "ui.bootstrap.transition","ui.bootstrap.collapse","ui.bootstrap.accordion","ui.bootstrap.alert","ui.bootstrap.bindHtml","ui.bootstrap.buttons","ui.bootstrap.carousel","ui.bootstrap.position","ui.bootstrap.datepicker","ui.bootstrap.dropdown","ui.bootstrap.modal","ui.bootstrap.pagination","ui.bootstrap.tooltip","ui.bootstrap.popover","ui.bootstrap.progressbar","ui.bootstrap.rating","ui.bootstrap.tabs","ui.bootstrap.timepicker","ui.bootstrap.typeahead"]);
@@ -2189,7 +2189,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
           var tooltipLinker = $compile( template );
 
           return function link ( scope, element, attrs, tooltipCtrl ) {
-            var target = element;
+            var target;
             var tooltip, tooltipScope;
             var transitionTimeout;
             var popupTimeout;
@@ -2197,6 +2197,33 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             var triggers = getTriggers( undefined );
             var hasEnableExp = angular.isDefined(attrs[prefix+'Enable']);
             var tooltipWidthWatcher;
+            var positionTarget;
+
+            function setTarget(element) {
+              target = element;
+              if (appendToBody && element && element[0]) {
+                var boundingClientRect = element[0].getBoundingClientRect();
+                var props = {
+                  offsetWidth: element.prop('offsetWidth'),
+                  offsetHeight: element.prop('offsetHeight')
+                };
+                positionTarget = {
+                  0: {
+                    getBoundingClientRect: function () {
+                      return boundingClientRect;
+                    }
+                  },
+                  prop: function (prop) {
+                    return props[prop];
+                  }
+                };
+              }
+              else {
+                positionTarget = element;
+              }
+            }
+
+            setTarget(element);
 
             function intersection(r1, r2) {
               if (r1.x1 < r2.x1) {
@@ -2241,7 +2268,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               var bestPlacement;
               var i = start;
               do {
-                var ttPosition = $position.positionElements(target, tooltip, possible[i], appendToBody);
+                var ttPosition = $position.positionElements(positionTarget, tooltip, possible[i], appendToBody);
                 if (!bodyPosition) {
                   bestPlacement = ttPosition;
                   scope.placement = possible[i];
@@ -2490,12 +2517,12 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                     if (target) {
                       $timeout(hide);
                     }
-                    target = val;
+                    setTarget(val);
                     if (val) {
                       $timeout(show);
                     }
                   } else {
-                    target = val;
+                    setTarget(val);
                   }
                 });
               }
