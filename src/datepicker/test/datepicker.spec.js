@@ -82,6 +82,28 @@ describe('datepicker directive', function () {
     });
   }
 
+  function triggerKeyDown(element, key, ctrl) {
+    var keyCodes = {
+      'enter': 13,
+      'space': 32,
+      'pageup': 33,
+      'pagedown': 34,
+      'end': 35,
+      'home': 36,
+      'left': 37,
+      'up': 38,
+      'right': 39,
+      'down': 40,
+      'esc': 27
+    };
+    var e = $.Event('keydown');
+    e.which = keyCodes[key];
+    if (ctrl) {
+      e.ctrlKey = true;
+    }
+    element.trigger(e);
+  }
+
   describe('', function () {
     beforeEach(function() {
       element = $compile('<datepicker ng-model="date"></datepicker>')($rootScope);
@@ -107,12 +129,13 @@ describe('datepicker directive', function () {
         ['05', '06', '07', '08', '09', '10', '11'],
         ['12', '13', '14', '15', '16', '17', '18'],
         ['19', '20', '21', '22', '23', '24', '25'],
-        ['26', '27', '28', '29', '30', '01', '02']
+        ['26', '27', '28', '29', '30', '01', '02'],
+        ['03', '04', '05', '06', '07', '08', '09']
       ]);
     });
 
     it('renders the week numbers based on ISO 8601', function() {
-      expect(getWeeks()).toEqual(['34', '35', '36', '37', '38']);
+      expect(getWeeks()).toEqual(['34', '35', '36', '37', '38', '39']);
     });
 
     it('value is correct', function() {
@@ -161,7 +184,8 @@ describe('datepicker directive', function () {
         ['08', '09', '10', '11', '12', '13', '14'],
         ['15', '16', '17', '18', '19', '20', '21'],
         ['22', '23', '24', '25', '26', '27', '28'],
-        ['29', '30', '31', '01', '02', '03', '04']
+        ['29', '30', '31', '01', '02', '03', '04'],
+        ['05', '06', '07', '08', '09', '10', '11']
       ]);
 
       expectSelectedElement( null, null );
@@ -235,7 +259,8 @@ describe('datepicker directive', function () {
           ['06', '07', '08', '09', '10', '11', '12'],
           ['13', '14', '15', '16', '17', '18', '19'],
           ['20', '21', '22', '23', '24', '25', '26'],
-          ['27', '28', '29', '30', '01', '02', '03']
+          ['27', '28', '29', '30', '01', '02', '03'],
+          ['04', '05', '06', '07', '08', '09', '10']
         ]);
 
         expectSelectedElement( 8 );
@@ -285,7 +310,7 @@ describe('datepicker directive', function () {
       });
     });
 
-    it('loops between different modes', function() {
+    it('does not loop between after max mode', function() {
       expect(getTitle()).toBe('September 2010');
 
       clickTitleButton();
@@ -295,7 +320,7 @@ describe('datepicker directive', function () {
       expect(getTitle()).toBe('2001 - 2020');
 
       clickTitleButton();
-      expect(getTitle()).toBe('September 2010');
+      expect(getTitle()).toBe('2001 - 2020');
     });
 
     describe('month selection mode', function () {
@@ -364,7 +389,8 @@ describe('datepicker directive', function () {
           ['06', '07', '08', '09', '10', '11', '12'],
           ['13', '14', '15', '16', '17', '18', '19'],
           ['20', '21', '22', '23', '24', '25', '26'],
-          ['27', '28', '29', '30', '01', '02', '03']
+          ['27', '28', '29', '30', '01', '02', '03'],
+          ['04', '05', '06', '07', '08', '09', '10']
         ]);
 
         clickOption( 17 );
@@ -427,6 +453,245 @@ describe('datepicker directive', function () {
       });
     });
 
+    describe('keyboard navigation', function() {
+      function getActiveLabel() {
+        return element.find('.active').eq(0).text();
+      }
+
+      describe('day mode', function() {
+        it('will be able to activate previous day', function() {
+          triggerKeyDown(element, 'left');
+          expect(getActiveLabel()).toBe('29');
+        });
+
+        it('will be able to select with enter', function() {
+          triggerKeyDown(element, 'left');
+          triggerKeyDown(element, 'enter');
+          expect($rootScope.date).toEqual(new Date('September 29, 2010 15:30:00'));
+        });
+
+        it('will be able to select with space', function() {
+          triggerKeyDown(element, 'left');
+          triggerKeyDown(element, 'space');
+          expect($rootScope.date).toEqual(new Date('September 29, 2010 15:30:00'));
+        });
+
+        it('will be able to activate next day', function() {
+          triggerKeyDown(element, 'right');
+          expect(getActiveLabel()).toBe('01');
+          expect(getTitle()).toBe('October 2010');
+        });
+
+        it('will be able to activate same day in previous week', function() {
+          triggerKeyDown(element, 'up');
+          expect(getActiveLabel()).toBe('23');
+        });
+
+        it('will be able to activate same day in next week', function() {
+          triggerKeyDown(element, 'down');
+          expect(getActiveLabel()).toBe('07');
+          expect(getTitle()).toBe('October 2010');
+        });
+
+        it('will be able to activate same date in previous month', function() {
+          triggerKeyDown(element, 'pageup');
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('August 2010');
+        });
+
+        it('will be able to activate same date in next month', function() {
+          triggerKeyDown(element, 'pagedown');
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('October 2010');
+        });
+
+        it('will be able to activate first day of the month', function() {
+          triggerKeyDown(element, 'home');
+          expect(getActiveLabel()).toBe('01');
+          expect(getTitle()).toBe('September 2010');
+        });
+
+        it('will be able to activate last day of the month', function() {
+          $rootScope.date = new Date('September 1, 2010 15:30:00');
+          $rootScope.$digest();
+
+          triggerKeyDown(element, 'end');
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('September 2010');
+        });
+
+        it('will be able to move to month mode', function() {
+          triggerKeyDown(element, 'up', true);
+          expect(getActiveLabel()).toBe('September');
+          expect(getTitle()).toBe('2010');
+        });
+
+        it('will not respond when trying to move to lower mode', function() {
+          triggerKeyDown(element, 'down', true);
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('September 2010');
+        });
+      });
+
+      describe('month mode', function() {
+        beforeEach(function() {
+          triggerKeyDown(element, 'up', true);
+        });
+
+        it('will be able to activate previous month', function() {
+          triggerKeyDown(element, 'left');
+          expect(getActiveLabel()).toBe('August');
+        });
+
+        it('will be able to activate next month', function() {
+          triggerKeyDown(element, 'right');
+          expect(getActiveLabel()).toBe('October');
+        });
+
+        it('will be able to activate same month in previous row', function() {
+          triggerKeyDown(element, 'up');
+          expect(getActiveLabel()).toBe('June');
+        });
+
+        it('will be able to activate same month in next row', function() {
+          triggerKeyDown(element, 'down');
+          expect(getActiveLabel()).toBe('December');
+        });
+
+        it('will be able to activate same date in previous year', function() {
+          triggerKeyDown(element, 'pageup');
+          expect(getActiveLabel()).toBe('September');
+          expect(getTitle()).toBe('2009');
+        });
+
+        it('will be able to activate same date in next year', function() {
+          triggerKeyDown(element, 'pagedown');
+          expect(getActiveLabel()).toBe('September');
+          expect(getTitle()).toBe('2011');
+        });
+
+        it('will be able to activate first month of the year', function() {
+          triggerKeyDown(element, 'home');
+          expect(getActiveLabel()).toBe('January');
+          expect(getTitle()).toBe('2010');
+        });
+
+        it('will be able to activate last month of the year', function() {
+          triggerKeyDown(element, 'end');
+          expect(getActiveLabel()).toBe('December');
+          expect(getTitle()).toBe('2010');
+        });
+
+        it('will be able to move to year mode', function() {
+          triggerKeyDown(element, 'up', true);
+          expect(getActiveLabel()).toBe('2010');
+          expect(getTitle()).toBe('2001 - 2020');
+        });
+
+        it('will be able to move to day mode', function() {
+          triggerKeyDown(element, 'down', true);
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('September 2010');
+        });
+
+        it('will move to day mode when selecting', function() {
+          triggerKeyDown(element, 'left', true);
+          triggerKeyDown(element, 'enter', true);
+          expect(getActiveLabel()).toBe('30');
+          expect(getTitle()).toBe('August 2010');
+          expect($rootScope.date).toEqual(new Date('September 30, 2010 15:30:00'));
+        });
+      });
+
+      describe('year mode', function() {
+        beforeEach(function() {
+          triggerKeyDown(element, 'up', true);
+          triggerKeyDown(element, 'up', true);
+        });
+
+        it('will be able to activate previous year', function() {
+          triggerKeyDown(element, 'left');
+          expect(getActiveLabel()).toBe('2009');
+        });
+
+        it('will be able to activate next year', function() {
+          triggerKeyDown(element, 'right');
+          expect(getActiveLabel()).toBe('2011');
+        });
+
+        it('will be able to activate same year in previous row', function() {
+          triggerKeyDown(element, 'up');
+          expect(getActiveLabel()).toBe('2005');
+        });
+
+        it('will be able to activate same year in next row', function() {
+          triggerKeyDown(element, 'down');
+          expect(getActiveLabel()).toBe('2015');
+        });
+
+        it('will be able to activate same date in previous view', function() {
+          triggerKeyDown(element, 'pageup');
+          expect(getActiveLabel()).toBe('1990');
+        });
+
+        it('will be able to activate same date in next view', function() {
+          triggerKeyDown(element, 'pagedown');
+          expect(getActiveLabel()).toBe('2030');
+        });
+
+        it('will be able to activate first year of the year', function() {
+          triggerKeyDown(element, 'home');
+          expect(getActiveLabel()).toBe('2001');
+        });
+
+        it('will be able to activate last year of the year', function() {
+          triggerKeyDown(element, 'end');
+          expect(getActiveLabel()).toBe('2020');
+        });
+
+        it('will not respond when trying to move to upper mode', function() {
+          triggerKeyDown(element, 'up', true);
+          expect(getTitle()).toBe('2001 - 2020');
+        });
+
+        it('will be able to move to month mode', function() {
+          triggerKeyDown(element, 'down', true);
+          expect(getActiveLabel()).toBe('September');
+          expect(getTitle()).toBe('2010');
+        });
+
+        it('will move to month mode when selecting', function() {
+          triggerKeyDown(element, 'left', true);
+          triggerKeyDown(element, 'enter', true);
+          expect(getActiveLabel()).toBe('September');
+          expect(getTitle()).toBe('2009');
+          expect($rootScope.date).toEqual(new Date('September 30, 2010 15:30:00'));
+        });
+      });
+
+      describe('`aria-activedescendant`', function() {
+        function checkActivedescendant() {
+          var activeId = element.find('table').attr('aria-activedescendant');
+          expect(element.find('#' + activeId + ' > button')).toHaveClass('active');
+        }
+
+        it('updates correctly', function() {
+          triggerKeyDown(element, 'left');
+          checkActivedescendant();
+
+          triggerKeyDown(element, 'down');
+          checkActivedescendant();
+
+          triggerKeyDown(element, 'up', true);
+          checkActivedescendant();
+
+          triggerKeyDown(element, 'up', true);
+          checkActivedescendant();
+        });
+      });
+
+    });
+
   });
 
   describe('attribute `starting-day`', function () {
@@ -446,12 +711,13 @@ describe('datepicker directive', function () {
         ['06', '07', '08', '09', '10', '11', '12'],
         ['13', '14', '15', '16', '17', '18', '19'],
         ['20', '21', '22', '23', '24', '25', '26'],
-        ['27', '28', '29', '30', '01', '02', '03']
+        ['27', '28', '29', '30', '01', '02', '03'],
+        ['04', '05', '06', '07', '08', '09', '10']
       ]);
     });
 
     it('renders the week numbers correctly', function() {
-      expect(getWeeks()).toEqual(['35', '36', '37', '38', '39']);
+      expect(getWeeks()).toEqual(['35', '36', '37', '38', '39', '40']);
     });
   });
 
@@ -652,7 +918,7 @@ describe('datepicker directive', function () {
     });
 
     it('executes the dateDisabled expression for each visible day plus one for validation', function() {
-      expect($rootScope.dateDisabledHandler.calls.length).toEqual(35 + 1);
+      expect($rootScope.dateDisabledHandler.calls.length).toEqual(42 + 1);
     });
 
     it('executes the dateDisabled expression for each visible month plus one for validation', function() {
@@ -720,7 +986,8 @@ describe('datepicker directive', function () {
         ['5', '6', '7', '8', '9', '10', '11'],
         ['12', '13', '14', '15', '16', '17', '18'],
         ['19', '20', '21', '22', '23', '24', '25'],
-        ['26', '27', '28', '29', '30', '1', '2']
+        ['26', '27', '28', '29', '30', '1', '2'],
+        ['3', '4', '5', '6', '7', '8', '9']
       ]);
     });
   });
@@ -781,7 +1048,8 @@ describe('datepicker directive', function () {
         ['4', '5', '6', '7', '8', '9', '10'],
         ['11', '12', '13', '14', '15', '16', '17'],
         ['18', '19', '20', '21', '22', '23', '24'],
-        ['25', '26', '27', '28', '29', '30', '1']
+        ['25', '26', '27', '28', '29', '30', '1'],
+        ['2', '3', '4', '5', '6', '7', '8']
       ]);
     });
 
@@ -816,7 +1084,7 @@ describe('datepicker directive', function () {
   });
 
   describe('as popup', function () {
-    var inputEl, dropdownEl, changeInputValueTo, $document;
+    var inputEl, dropdownEl, $document, $sniffer;
 
     function assignElements(wrapElement) {
       inputEl = wrapElement.find('input');
@@ -824,31 +1092,43 @@ describe('datepicker directive', function () {
       element = dropdownEl.find('table');
     }
 
-    describe('', function () {
-      beforeEach(inject(function(_$document_, $sniffer) {
+    function changeInputValueTo(el, value) {
+      el.val(value);
+      el.trigger($sniffer.hasEvent('input') ? 'input' : 'change');
+      $rootScope.$digest();
+    }
+
+    describe('initially', function () {
+      beforeEach(inject(function(_$document_, _$sniffer_) {
         $document = _$document_;
+        $rootScope.isopen = true;
         $rootScope.date = new Date('September 30, 2010 15:30:00');
         var wrapElement = $compile('<div><input ng-model="date" datepicker-popup><div>')($rootScope);
         $rootScope.$digest();
         assignElements(wrapElement);
-
-        changeInputValueTo = function (el, value) {
-          el.val(value);
-          el.trigger($sniffer.hasEvent('input') ? 'input' : 'change');
-          $rootScope.$digest();
-        };
       }));
-
-      it('to display the correct value in input', function() {
-        expect(inputEl.val()).toBe('2010-09-30');
-      });
 
       it('does not to display datepicker initially', function() {
         expect(dropdownEl).toBeHidden();
       });
 
-      it('displays datepicker on input focus', function() {
-        inputEl.focus();
+      it('to display the correct value in input', function() {
+        expect(inputEl.val()).toBe('2010-09-30');
+      });
+    });
+
+    describe('initially opened', function () {
+      beforeEach(inject(function(_$document_, _$sniffer_) {
+        $document = _$document_;
+        $sniffer = _$sniffer_;
+        $rootScope.isopen = true;
+        $rootScope.date = new Date('September 30, 2010 15:30:00');
+        var wrapElement = $compile('<div><input ng-model="date" datepicker-popup is-open="isopen"><div>')($rootScope);
+        $rootScope.$digest();
+        assignElements(wrapElement);
+      }));
+
+      it('datepicker is displayed', function() {
         expect(dropdownEl).not.toBeHidden();
       });
 
@@ -860,7 +1140,8 @@ describe('datepicker directive', function () {
           ['05', '06', '07', '08', '09', '10', '11'],
           ['12', '13', '14', '15', '16', '17', '18'],
           ['19', '20', '21', '22', '23', '24', '25'],
-          ['26', '27', '28', '29', '30', '01', '02']
+          ['26', '27', '28', '29', '30', '01', '02'],
+          ['03', '04', '05', '06', '07', '08', '09']
         ]);
       });
 
@@ -883,7 +1164,6 @@ describe('datepicker directive', function () {
       });
 
       it('closes the dropdown when a day is clicked', function() {
-        inputEl.focus();
         expect(dropdownEl.css('display')).not.toBe('none');
 
         clickOption(17);
@@ -909,7 +1189,6 @@ describe('datepicker directive', function () {
       });
 
       it('closes when click outside of calendar', function() {
-        inputEl.focus();
         expect(dropdownEl).not.toBeHidden();
 
         $document.find('body').click();
@@ -935,6 +1214,41 @@ describe('datepicker directive', function () {
         expect(inputEl).not.toHaveClass('ng-invalid-date');
       });
 
+      describe('focus', function () {
+        beforeEach(function() {
+          var body = $document.find('body');
+          body.append(inputEl);
+          body.append(dropdownEl);
+        });
+
+        afterEach(function() {
+          inputEl.remove();
+          dropdownEl.remove();
+        });
+
+        it('returns to the input when ESC key is pressed in the popup and closes', function() {
+          expect(dropdownEl).not.toBeHidden();
+
+          dropdownEl.find('button').eq(0).focus();
+          expect(document.activeElement.tagName).toBe('BUTTON');
+
+          triggerKeyDown(dropdownEl, 'esc');
+          expect(dropdownEl).toBeHidden();
+          expect(document.activeElement.tagName).toBe('INPUT');
+        });
+
+        it('returns to the input when ESC key is pressed in the input and closes', function() {
+          expect(dropdownEl).not.toBeHidden();
+
+          dropdownEl.find('button').eq(0).focus();
+          expect(document.activeElement.tagName).toBe('BUTTON');
+
+          triggerKeyDown(inputEl, 'esc');
+          $rootScope.$digest();
+          expect(dropdownEl).toBeHidden();
+          expect(document.activeElement.tagName).toBe('INPUT');
+        });
+      });
     });
 
     describe('attribute `datepickerOptions`', function () {
@@ -1037,6 +1351,19 @@ describe('datepicker directive', function () {
       });
     });
 
+    describe('european format', function () {
+      it('dd.MM.yyyy', function() {
+        var wrapElement = $compile('<div><input ng-model="date" datepicker-popup="dd.MM.yyyy"><div>')($rootScope);
+        $rootScope.$digest();
+        assignElements(wrapElement);
+
+        changeInputValueTo(inputEl, '11.08.2013');
+        expect($rootScope.date.getFullYear()).toEqual(2013);
+        expect($rootScope.date.getMonth()).toEqual(7);
+        expect($rootScope.date.getDate()).toEqual(11);
+      });
+    });
+
     describe('`close-on-date-selection` attribute', function () {
       beforeEach(inject(function() {
         $rootScope.close = false;
@@ -1061,13 +1388,15 @@ describe('datepicker directive', function () {
 
       describe('', function () {
         beforeEach(inject(function() {
-          var wrapElement = $compile('<div><input ng-model="date" datepicker-popup><div>')($rootScope);
+          $rootScope.isopen = true;
+          var wrapElement = $compile('<div><input ng-model="date" datepicker-popup is-open="isopen"><div>')($rootScope);
           $rootScope.$digest();
           assignElements(wrapElement);
           assignButtonBar();
         }));
 
         it('should exist', function() {
+          expect(dropdownEl).not.toBeHidden();
           expect(dropdownEl.find('li').length).toBe(2);
         });
 
@@ -1112,11 +1441,8 @@ describe('datepicker directive', function () {
         });
 
         it('should have a button to close calendar', function() {
-          inputEl.focus();
-          expect(dropdownEl.css('display')).not.toBe('none');
-
           buttons.eq(2).click();
-          expect(dropdownEl.css('display')).toBe('none');
+          expect(dropdownEl).toBeHidden();
         });
       });
 
@@ -1217,6 +1543,10 @@ describe('datepicker directive', function () {
         $rootScope.date = new Date();
       });
 
+      afterEach(function () {
+        $document.find('body').find('.dropdown-menu').remove();
+      });
+
       it('should append to the body', function() {
         var $body = $document.find('body'),
             bodyLength = $body.children().length,
@@ -1265,6 +1595,25 @@ describe('datepicker directive', function () {
         for (var i = 0; i < 5; i++) {
           expect(tr.eq(i).find('td').eq(0)).toBeHidden();
         }
+      });
+    });
+
+    describe('`datepicker-mode`', function () {
+      beforeEach(inject(function() {
+        $rootScope.date = new Date('August 11, 2013');
+        $rootScope.mode = 'month';
+        wrapElement = $compile('<div><input ng-model="date" datepicker-popup datepicker-mode="mode"></div>')($rootScope);
+        $rootScope.$digest();
+        assignElements(wrapElement);
+      }));
+
+      it('shows the correct title', function() {
+        expect(getTitle()).toBe('2013');
+      });
+
+      it('updates binding', function() {
+        clickTitleButton();
+        expect($rootScope.mode).toBe('year');
       });
     });
   });
@@ -1338,12 +1687,12 @@ describe('datepicker directive', function () {
       $rootScope.$digest();
     }));
 
-    it('loops between allowed modes', function() {
+    it('does not move below it', function() {
+      expect(getTitle()).toBe('2013');
+      clickOption( 5 );
       expect(getTitle()).toBe('2013');
       clickTitleButton();
       expect(getTitle()).toBe('2001 - 2020');
-      clickTitleButton();
-      expect(getTitle()).toBe('2013');
     });
   });
 
@@ -1354,12 +1703,12 @@ describe('datepicker directive', function () {
       $rootScope.$digest();
     }));
 
-    it('loops between allowed modes', function() {
+    it('does not move above it', function() {
       expect(getTitle()).toBe('August 2013');
       clickTitleButton();
       expect(getTitle()).toBe('2013');
       clickTitleButton();
-      expect(getTitle()).toBe('August 2013');
+      expect(getTitle()).toBe('2013');
     });
   });
 });

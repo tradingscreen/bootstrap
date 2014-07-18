@@ -5,7 +5,7 @@ angular.module('ui.bootstrap.dropdown', [])
 })
 
 .service('dropdownService', ['$document', function($document) {
-  var self = this, openScope = null;
+  var openScope = null;
 
   this.open = function( dropdownScope ) {
     if ( !openScope ) {
@@ -28,7 +28,12 @@ angular.module('ui.bootstrap.dropdown', [])
     }
   };
 
-  var closeDropdown = function() {
+  var closeDropdown = function( evt ) {
+    var toggleElement = openScope.getToggleElement();
+    if ( evt && toggleElement && toggleElement[0].contains(evt.target) ) {
+        return;
+    }
+
     openScope.$apply(function() {
       openScope.isOpen = false;
     });
@@ -72,13 +77,17 @@ angular.module('ui.bootstrap.dropdown', [])
     return scope.isOpen;
   };
 
+  scope.getToggleElement = function() {
+    return self.toggleElement;
+  };
+
   scope.focusToggleElement = function() {
     if ( self.toggleElement ) {
       self.toggleElement[0].focus();
     }
   };
 
-  scope.$watch('isOpen', function( isOpen ) {
+  scope.$watch('isOpen', function( isOpen, wasOpen ) {
     $animate[isOpen ? 'addClass' : 'removeClass'](self.$element, openClass);
 
     if ( isOpen ) {
@@ -89,7 +98,9 @@ angular.module('ui.bootstrap.dropdown', [])
     }
 
     setIsOpen($scope, isOpen);
-    toggleInvoker($scope, { open: !!isOpen });
+    if (angular.isDefined(isOpen) && isOpen !== wasOpen) {
+      toggleInvoker($scope, { open: !!isOpen });
+    }
   });
 
   $scope.$on('$locationChangeSuccess', function() {
@@ -124,7 +135,6 @@ angular.module('ui.bootstrap.dropdown', [])
 
       var toggleDropdown = function(event) {
         event.preventDefault();
-        event.stopPropagation();
 
         if ( !element.hasClass('disabled') && !attrs.disabled ) {
           scope.$apply(function() {

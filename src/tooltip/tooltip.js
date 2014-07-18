@@ -254,8 +254,12 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 return;
               }
               if ( scope.tt_popupDelay ) {
-                popupTimeout = $timeout( show, scope.tt_popupDelay, false );
-                popupTimeout.then(function(reposition){reposition();});
+                // Do nothing if the tooltip was already scheduled to pop-up.
+                // This happens if show is triggered multiple times before any hide is triggered.
+                if (!popupTimeout) {
+                  popupTimeout = $timeout( show, scope.tt_popupDelay, false );
+                  popupTimeout.then(function(reposition){reposition();});
+                }
               } else {
                 show()();
               }
@@ -289,6 +293,14 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             // Show the tooltip popup element.
             function show() {
 
+              popupTimeout = null;
+
+              // If there is a pending remove transition, we must cancel it, lest the
+              // tooltip be mysteriously removed.
+              if ( transitionTimeout ) {
+                $timeout.cancel( transitionTimeout );
+                transitionTimeout = null;
+              }
 
               // Don't show empty tooltips.
               if ( ! scope.content || scope.isOpen ) {
@@ -296,12 +308,6 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               }
 
               createTooltip();
-
-              // If there is a pending remove transition, we must cancel it, lest the
-              // tooltip be mysteriously removed.
-              if ( transitionTimeout ) {
-                $timeout.cancel( transitionTimeout );
-              }
 
               // Set the initial positioning.
               tooltip.css({ top: 0, left: 0, display: 'block' });
@@ -332,6 +338,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
 
               //if tooltip is going to be shown after delay, we must cancel this
               $timeout.cancel( popupTimeout );
+              popupTimeout = null;
 
               // Don't show already shown or empty tooltips.
               if ( !scope.isOpen ) {
@@ -347,7 +354,9 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               // need to wait for it to expire beforehand.
               // FIXME: this is a placeholder for a port of the transitions library.
               if ( scope.animation ) {
-                transitionTimeout = $timeout(removeTooltip, 500);
+                if (!transitionTimeout) {
+                  transitionTimeout = $timeout(removeTooltip, 500);
+                }
               } else {
                 removeTooltip();
               }
@@ -370,6 +379,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             }
 
             function removeTooltip() {
+              transitionTimeout = null;
               if (tooltip) {
                 tooltip.remove();
                 tooltip = null;
