@@ -1,7 +1,7 @@
 {
   "author": "https://github.com/angular-ui/bootstrap/graphs/contributors",
   "name": "angular-ui-bootstrap",
-  "version": "0.12.2-ts",
+  "version": "0.12.3-ts",
   "homepage": "http://angular-ui.github.io/bootstrap/",
   "dependencies": {},
   "devDependencies": {
