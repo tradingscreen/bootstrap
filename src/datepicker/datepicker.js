@@ -12,9 +12,10 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   maxMode: 'year',
   showWeeks: true,
   startingDay: 0,
-  yearRange: 20,
+  yearRange: 10,
   minDate: null,
-  maxDate: null
+  maxDate: null,
+  otherDate: null
 })
 
 .controller('DatepickerController', ['$scope', '$attrs', '$parse', '$interpolate', '$timeout', '$log', 'dateFilter', 'datepickerConfig', function($scope, $attrs, $parse, $interpolate, $timeout, $log, dateFilter, datepickerConfig) {
@@ -31,7 +32,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
   });
 
   // Watchable date attributes
-  angular.forEach(['minDate', 'maxDate'], function( key ) {
+  angular.forEach(['minDate', 'maxDate', 'otherDate'], function( key ) {
     if ( $attrs[key] ) {
       $scope.$parent.$watch($parse($attrs[key]), function(value) {
         self[key] = value ? new Date(value) : null;
@@ -93,12 +94,17 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       label: dateFilter(date, format),
       selected: model && this.compare(date, model) === 0,
       disabled: this.isDisabled(date),
-      current: this.compare(date, new Date()) === 0
+      current: this.compare(date, new Date()) === 0,
+      inRange: this.inRange(date, model)
     };
   };
 
   this.isDisabled = function( date ) {
     return ((this.minDate && this.compare(date, this.minDate) < 0) || (this.maxDate && this.compare(date, this.maxDate) > 0) || ($attrs.dateDisabled && $scope.dateDisabled({date: date, mode: $scope.datepickerMode})));
+  };
+
+  this.inRange = function( date, model ) {
+    return this.otherDate && (model ? ((this.compare(date, model) * this.compare(date, this.otherDate)) <= 0) : (this.minDate ? this.compare(date, this.otherDate) >= 0 : this.compare(date, this.otherDate) <= 0));
   };
 
   // Split array into smaller arrays
@@ -249,7 +255,7 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
         scope.labels = new Array(7);
         for (var j = 0; j < 7; j++) {
           scope.labels[j] = {
-            abbr: dateFilter(days[j].date, ctrl.formatDayHeader),
+            abbr: dateFilter(days[j].date, ctrl.formatDayHeader).substring(0, 1),
             full: dateFilter(days[j].date, 'EEEE')
           };
         }
@@ -321,13 +327,13 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
             year = ctrl.activeDate.getFullYear();
 
         for ( var i = 0; i < 12; i++ ) {
-          months[i] = angular.extend(ctrl.createDateObject(new Date(year, i, 1), ctrl.formatMonth), {
+          months[i] = angular.extend(ctrl.createDateObject(new Date(year, i, 1), 'MMM'), {
             uid: scope.uniqueId + '-' + i
           });
         }
 
         scope.title = dateFilter(ctrl.activeDate, ctrl.formatMonthTitle);
-        scope.rows = ctrl.split(months, 3);
+        scope.dates = months;//ctrl.split(months, 3);
       };
 
       ctrl.compare = function(date1, date2) {
@@ -378,16 +384,17 @@ angular.module('ui.bootstrap.datepicker', ['ui.bootstrap.dateparser', 'ui.bootst
       }
 
       ctrl._refreshView = function() {
-        var years = new Array(range);
+        var years = new Array(range + 2);
 
-        for ( var i = 0, start = getStartingYear(ctrl.activeDate.getFullYear()); i < range; i++ ) {
-          years[i] = angular.extend(ctrl.createDateObject(new Date(start + i, 0, 1), ctrl.formatYear), {
+        for ( var i = -2, start = getStartingYear(ctrl.activeDate.getFullYear()); i < range; i++ ) {
+          years[i + 2] = angular.extend(ctrl.createDateObject(new Date(start + i, 0, 1), ctrl.formatYear), {
+            secondary: i === -2  || i === range - 1,
             uid: scope.uniqueId + '-' + i
           });
         }
 
-        scope.title = [years[0].label, years[range - 1].label].join(' - ');
-        scope.rows = ctrl.split(years, 5);
+        scope.title = [years[1].label, years[range].label].join(' - ');
+        scope.dates = years;//ctrl.split(years, 5);
       };
 
       ctrl.compare = function(date1, date2) {
