@@ -412,8 +412,10 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             });
 
             var unregisterTriggers = function () {
-              target.unbind(triggers.show, showTooltipBind);
-              target.unbind(triggers.hide, hideTooltipBind);
+              if (target) {
+                target.unbind(triggers.show, showTooltipBind);
+                target.unbind(triggers.hide, hideTooltipBind);
+              }
             };
 
             attrs.$observe( prefix+'Trigger', function ( val ) {
