@@ -172,7 +172,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
             var positionTooltip = function () {
               tooltip.css( {top: 0, left: 0} );
 
-              var possible = ['bottom', 'right', 'top', 'left'];
+              var possible = ['bottom', 'right', 'top', 'left', 'bottom-right', 'top-right', 'bottom-left', 'bottom-right'];
               var start = possible.indexOf(scope.preferredPlacement);
               if (start < 0) {
                 start = 0;
@@ -192,7 +192,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 var ttPosition = $position.positionElements(positionTarget, tooltip, possible[i], appendToBody);
                 if (!bodyPosition) {
                   bestPlacement = ttPosition;
-                  scope.placement = possible[i];
+                  scope.placement = possible[i].match(/[^-]*/)[0];
                   break;
                 }
                 var rect = intersection(
@@ -213,13 +213,13 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
                 var area = rect.width * rect.height;
                 if (rect.width === ttWidth && rect.height === ttHeight) {
                   bestPlacement = ttPosition;
-                  scope.placement = possible[i];
+                  scope.placement = possible[i].match(/[^-]*/)[0];
                   break;
                 }
 
                 if (!bestPlacement || bestPlacement.area < area) {
                   bestPlacement = { area: area, top: ttPosition.top, left: ttPosition.left };
-                  scope.placement = possible[i];
+                  scope.placement = possible[i].match(/[^-]*/)[0];
                 }
 
                 i = (i + 1) % possible.length;
@@ -312,7 +312,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               // Set the initial positioning.
               tooltip.css({ top: 0, left: 0, display: 'block' });
 
-              // Now we add it to the DOM because need some info about it. But it's not 
+              // Now we add it to the DOM because need some info about it. But it's not
               // visible yet anyway.
               if ( appendToBody ) {
                   $document.find( 'body' ).append( tooltip );
@@ -350,7 +350,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position', 'ui.bootstrap
               // First things first: we don't show it anymore.
               scope.isOpen = false;
 
-              // And now we remove it from the DOM. However, if we have animation, we 
+              // And now we remove it from the DOM. However, if we have animation, we
               // need to wait for it to expire beforehand.
               // FIXME: this is a placeholder for a port of the transitions library.
               if ( scope.animation ) {
